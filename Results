@@ -1,0 +1,17 @@
+We implement our message with a list of characters instead of as a string because it makes the various functions easier to run. For example when the string is mutated and one charactor is swaped for another, it is much easier to swap an element in a list with another element than to change a character in a string to another character.
+
+
+
+I found that with only 500 generations, I was not able to return my test string or the sample string. The sample string did not have a space between "IS" and "NOW" and my test string of 25 characters was missing two characters. However, if I increased the generations to 1000, I was able to return my string and the given example string with 100% accuracy! The more generations, the more likely that a mutation will give a correct character.
+
+>>> python3 evolve_text.py (With 500 generations)
+Message('SKYNET ISNOW ONLINE')	[Distance: 1]
+500	175   	1.03333	0.179505 	1  	2
+ * It's missing space between "IS" and "NOW"
+
+
+>>> python3 evolve_text.py (With 1000 generations)
+Message('SKYNET IS NOW ONLINE')	[Distance: 0]
+1000	189   	0.0433333 	0.203606 	0  	1  
+ * 100% Correct!
+

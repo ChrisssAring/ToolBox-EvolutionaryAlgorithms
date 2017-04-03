@@ -92,8 +92,43 @@ class Message(list):
 # Genetic operators
 # -----------------------------------------------------------------------------
 
-# TODO: Implement levenshtein_distance function (see Day 9 in-class exercises)
-# HINT: Now would be a great time to implement memoization if you haven't
+def levenshtein_distance(source, goal):
+    if len(source) < len(goal):
+        return levenshtein_distance(goal, source)
+
+    # So now we have len(source) >= len(goal).
+    if len(goal) == 0:
+        return len(source)
+
+    # We call tuple() to force strings to be used as sequences
+    # ('c', 'a', 't', 's') - numpy uses them as values by default.
+    source = numpy.array(tuple(source))
+    goal = numpy.array(tuple(goal))
+
+    # We use a dynamic programming algorithm, but with the
+    # added optimization that we only need the last two rows
+    # of the matrix.
+    previous_row = numpy.arange(goal.size + 1)
+    for s in source:
+        # Insertion (goal grows longer than source):
+        current_row = previous_row + 1
+
+        # Substitution or matching:
+        # goal and source items are aligned, and either
+        # are different (cost of 1), or are the same (cost of 0).
+        current_row[1:] = numpy.minimum(
+                current_row[1:],
+                numpy.add(previous_row[:-1], goal != s))
+
+        # Deletion (goal grows shorter than source):
+        current_row[1:] = numpy.minimum(
+                current_row[1:],
+                current_row[0:-1] + 1)
+
+        previous_row = current_row
+
+    return previous_row[-1]
+
 
 def evaluate_text(message, goal_text, verbose=VERBOSE):
     """
@@ -105,6 +140,20 @@ def evaluate_text(message, goal_text, verbose=VERBOSE):
     if verbose:
         print("{msg!s}\t[Distance: {dst!s}]".format(msg=message, dst=distance))
     return (distance, )     # Length 1 tuple, required by DEAP
+
+def mate_text(list1, list2):
+    size = min(len(list1), len(list2))
+    point1 = random.randint(1, size)
+    point2 = random.randint(1, size - 1)
+
+    if point2 >= point1:
+        point2 += 1
+    else:
+        point1, point2 = point2, point1
+
+    list1[point1:point2], list2[point1:point2] = list2[point1:point2], list1[point1:point2]
+
+    return list1, list2
 
 
 def mutate_text(message, prob_ins=0.05, prob_del=0.05, prob_sub=0.05):
@@ -121,13 +170,13 @@ def mutate_text(message, prob_ins=0.05, prob_del=0.05, prob_sub=0.05):
     """
 
     if random.random() < prob_ins:
-        # TODO: Implement insertion-type mutation
-        pass
-
-    # TODO: Also implement deletion and substitution mutations
-    # HINT: Message objects inherit from list, so they also inherit
-    #       useful list methods
-    # HINT: You probably want to use the VALID_CHARS global variable
+        message.insert(random.randrange(len(message)+1), random.choice(VALID_CHARS))
+    if random.random() < prob_del:
+        index = random.randrange(len(message))
+        message.pop(index)
+    if random.random() < prob_sub:
+        index = random.randrange(len(message))
+        message[index] = random.choice(VALID_CHARS)
 
     return (message, )   # Length 1 tuple, required by DEAP
 
@@ -149,7 +198,7 @@ def get_toolbox(text):
 
     # Genetic operators
     toolbox.register("evaluate", evaluate_text, goal_text=text)
-    toolbox.register("mate", tools.cxTwoPoint)
+    toolbox.register("mate", mate_text)
     toolbox.register("mutate", mutate_text)
     toolbox.register("select", tools.selTournament, tournsize=3)
 
@@ -185,8 +234,9 @@ def evolve_string(text):
                                    toolbox,
                                    cxpb=0.5,    # Prob. of crossover (mating)
                                    mutpb=0.2,   # Probability of mutation
-                                   ngen=500,    # Num. of generations to run
+                                   ngen=1000,    # Num. of generations to run
                                    stats=stats)
+                                   # Also tried ngen= 750, 1000
 
     return pop, log
 
